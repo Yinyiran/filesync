@@ -1,6 +1,6 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow } = require("electron")
-// const path = require('path')
+const path = require('path')
 
 // Enable live reload for all the files inside your project directory
 // require('electron-reload')(__dirname);
@@ -12,22 +12,26 @@ require('electron-reload')(__dirname, {
 });
 
 
-
 function createWindow() {
   // Create the browser window.
   const win = new BrowserWindow({
     width: 800,
     height: 600,
-    frame:false,
+    // frame: false,
+    maximizable: true,
+    minimizable: true,
+    resizable: true,
     webPreferences: {
       nodeIntegration: true,
       // preload: path.join(__dirname, 'preload.js')
-    }
+    },
+    icon: path.join(__dirname, "public/favicon.ico")
   })
   process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'; // DISABLE SECURITY WARNINGS
   // and load the index.html of the app.
   // win.webContents.openDevTools({ mode: 'undocked' });
-  win.loadURL(`http://192.168.1.73:3000`)
+  win.loadURL(`http://localhost:3000/`)
+  win.setMenu(null);
 
   // Open the DevTools.
   // win.webContents.openDevTools()

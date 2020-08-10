@@ -1,46 +1,43 @@
 <template>
-  <header class="header">
-    <span class="span">
-      <span>—</span>
-      <span>O</span>
-      <span>x</span>
-    </span>
-  </header>
-  <img alt="Vue logo" src="./assets/logo.png" />
-  <HelloWorld msg="Hello Vue 3.0 + Vite" />
-  <mark>npm-run-all -p main serve</mark>
-  <button @click="openWin">open new window</button>
+  <ul>
+    <li>最近同步的文件</li>
+    <li>所占空间大小</li>
+    <li>设置同步的文件夹</li>
+    <li>本地文件管理 https://ourcodeworld.com/articles/read/106/how-to-choose-read-save-delete-or-create-a-file-with-electron-framework</li>
+  </ul>
 </template>
 
 <script>
-  import HelloWorld from "./components/HelloWorld.vue";
+  const remote = require("electron").remote;
+  const Win = remote.getCurrentWindow();
 
   export default {
     name: "App",
-    components: {
-      HelloWorld,
-    },
-    mounted(){
-      // const { BrowserWindow } = require("electron")
-    },
+    mounted() {},
     methods: {
       openWin() {
-        const { BrowserWindow } = require("electron").remote;
-        const win = new BrowserWindow({
+        const win = new remote.BrowserWindow({
           height: 600,
           width: 800,
         });
         win.setMenu(null);
         win.loadURL("https://baidu.com");
       },
+      minimize() {
+        Win.minimize();
+      },
+      maximize() {
+        if (!Win.isMaximized()) {
+          Win.maximize();
+        } else {
+          Win.unmaximize();
+        }
+      },
+      closeWin() {
+        window.close();
+      },
     },
   };
 </script>
-<style scoped>
-  .header {
-    -webkit-user-select: none;
-    -webkit-app-region: drag;
-    height: 30px;
-    background-color: #e8e8e8;
-  }
+<style lang="less">
 </style>

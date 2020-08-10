@@ -1,12 +1,11 @@
+@import "//at.alicdn.com/t/font_431942_2m4r399cnqw.css";
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
   color: #2c3e50;
 }
 
 body{
   margin: 0;
-  border: 1px solid #e8e8e8;
 }

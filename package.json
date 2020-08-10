@@ -1,0 +1,23 @@
+{
+  "name": "todo",
+  "license": "ISC",
+  "version": "1.0.0",
+  "description": "manage your time",
+  "main": "main.js",
+  "scripts": {
+    "dev": "npm-run-all -p main serve",
+    "main": "electron .",
+    "serve": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "vue": "^3.0.0-rc.1"
+  },
+  "devDependencies": {
+    "@vue/compiler-sfc": "^3.0.0-rc.1",
+    "electron": "^9.2.0",
+    "electron-reload": "^1.5.0",
+    "npm-run-all": "^4.1.5",
+    "vite": "^1.0.0-rc.1"
+  }
+}

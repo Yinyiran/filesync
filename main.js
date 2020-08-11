@@ -18,9 +18,6 @@ function createWindow() {
     width: 800,
     height: 600,
     // frame: false,
-    maximizable: true,
-    minimizable: true,
-    resizable: true,
     webPreferences: {
       nodeIntegration: true,
       // preload: path.join(__dirname, 'preload.js')
@@ -28,13 +25,11 @@ function createWindow() {
     icon: path.join(__dirname, "public/favicon.ico")
   })
   process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'; // DISABLE SECURITY WARNINGS
-  // and load the index.html of the app.
-  // win.webContents.openDevTools({ mode: 'undocked' });
+  
+  win.webContents.openDevTools({ mode: 'undocked' });// Open the DevTools.
+  
   win.loadURL(`http://localhost:3000/`)
   win.setMenu(null);
-
-  // Open the DevTools.
-  // win.webContents.openDevTools()
 }
 
 // This method will be called when Electron has finished

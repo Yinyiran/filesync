@@ -1,13 +1,13 @@
 <template>
   <div class="main">
     <ul class="header">
-      <span
+      <li
         class="iconfont icon-jiantou"
         :class="{disable:crumbs.length==1}"
         title="返回到上一级文件夹"
         @click="backdir"
-      ></span>
-      <div class="crumb-wrap" title="文件路径">
+      ></li>
+      <li class="crumb-wrap" title="文件路径">
         <span
           class="crumb-item"
           v-for="(cru,index) in crumbs"
@@ -17,22 +17,17 @@
           <span class="crumb-name">{{cru.dirName}}</span>
           <span v-show="index<crumbs.length-1" class="iconfont icon-right"></span>
         </span>
-      </div>
+      </li>
       <!-- <li class="headbtn iconfont icon-ziyuan" title="搜索文件"></li> -->
-      <li class="headbtn iconfont icon-shezhi" @click="setSyncDir" title="设置需要同步的文件夹"></li>
+      <span class="setting iconfont icon-shezhi" @click="showSetting =!showSetting ">
+        <ul class="setting-menu" v-show="showSetting">
+          <li class="setting-btn" @click="setSyncDir" title="设置需要同步的文件夹">设置同步文件夹</li>
+          <li class="setting-btn">垃圾箱</li>
+          <li class="setting-btn" v-if="listType !== 'list'" @click="setListType('list')">缩略图显示</li>
+          <li class="setting-btn" v-else @click="setListType('thumb')">列表显示</li>
+        </ul>
+      </span>
       <!-- <li class="headbtn iconfont icon-lajixiang" title="垃圾箱，查看已经删除的文件"></li> -->
-      <span
-        class="headbtn iconfont icon-liebiao"
-        v-if="listType === 'list'"
-        title="使用缩略图展示（当前为列表展示）"
-        @click="setListType('thumb')"
-      ></span>
-      <span
-        class="headbtn iconfont icon-fangkuai"
-        v-else
-        title="使用列表展示（当前为缩略图展示）"
-        @click="setListType('list')"
-      ></span>
     </ul>
     <!-- 缩略图 -->
     <div class="file-thumb" v-if="files.length && listType == 'thumb'">
@@ -49,6 +44,7 @@
         <span class="cell name">名称</span>
         <span class="cell size">大小</span>
         <span class="cell modify">上次修改日期</span>
+        <span class="cell operate">操作</span>
       </div>
       <div class="list-wrap">
         <div
@@ -63,17 +59,22 @@
           </span>
           <span class="cell size">{{item.fileSize}}</span>
           <span class="cell modify">{{item.modifyTime}}</span>
+          <span class="cell operate">
+            <span v-if="item.isDelete">恢复</span>
+            <span v-else>删除</span>
+          </span>
         </div>
       </div>
     </div>
     <div class="empty-tip" v-if="files.length===0">此文件夹为空</div>
-    <!-- <ul>
-      <li>1.切换样式</li>
-      <li>3.垃圾箱</li>
-      <li>4.文件属性：文件大小，创建日期，最近修改日期</li>
-      <li>5.历史版本</li>
-      <li>7.操作：删除，恢复</li>
-    </ul>-->
+    <ul style="padding:20px">
+      <li>1.初始：保存文件夹，上传文件（递归），保存本地库（localPath,ID,LifeToken</li>
+      <li>2.打开程序：检测所有文件是否都有本地库，没有本地库的文件和文件夹需要保存和上传</li>
+      <li>3.打开程序：检测所有线上版本是否有本地库，没有就下载</li>
+      <li>4.同时删除本地文件</li>
+      <li>5.isDelete的文件检测本地是否有，如果有就删除</li>
+      <li>6.记录电脑登录日志，只检测切换电脑期间所作的操作</li>
+    </ul>
   </div>
 </template>
 
@@ -92,6 +93,7 @@
         files: [],
         crumbs: [],
         listType: "",
+        showSetting: false,
       };
     },
     mounted() {
@@ -104,33 +106,33 @@
         });
         this.getDirAndFile(syncPath);
 
-        var watcher = chokidar.watch(syncPath, {
-          ignored: /[\/\\]\./,
-          persistent: true,
-        });
-        var log = console.log.bind(console);
+        // var watcher = chokidar.watch(syncPath, {
+        //   ignored: /[\/\\]\./,
+        //   persistent: true,
+        // });
+        // var log = console.log.bind(console);
 
-        watcher.on("add", function (path) {
-          log("File", path, "has been added");
-        });
-        watcher.on("addDir", function (path) {
-          log("Directory", path, "has been added");
-        });
-        watcher.on("change", function (path) {
-          log("File", path, "has been changed");
-        });
-        watcher.on("unlink", function (path) {
-          log("File", path, "has been removed");
-        });
-        watcher.on("unlinkDir", function (path) {
-          log("Directory", path, "has been removed");
-        });
-        watcher.on("error", function (error) {
-          log("Error happened", error);
-        });
-        watcher.on("ready", function () {
-          log("Initial scan complete. Ready for changes.");
-        });
+        // watcher.on("add", function (path) {
+        //   log("File", path, "has been added");
+        // });
+        // watcher.on("addDir", function (path) {
+        //   log("Directory", path, "has been added");
+        // });
+        // watcher.on("change", function (path) {
+        //   log("File", path, "has been changed");
+        // });
+        // watcher.on("unlink", function (path) {
+        //   log("File", path, "has been removed");
+        // });
+        // watcher.on("unlinkDir", function (path) {
+        //   log("Directory", path, "has been removed");
+        // });
+        // watcher.on("error", function (error) {
+        //   log("Error happened", error);
+        // });
+        // watcher.on("ready", function () {
+        //   log("Initial scan complete. Ready for changes.");
+        // });
       }
     },
     methods: {
@@ -277,13 +279,29 @@
     .header-item {
       margin-left: 10px;
     }
-    .headbtn {
+    .setting {
       margin-left: 10px;
       font-size: 18px;
       color: #555;
       cursor: pointer;
-      &:hover {
-        color: @color-active;
+      position: relative;
+      user-select: none;
+      .setting-menu {
+        position: absolute;
+        right: 0px;
+        top: 34px;
+        padding: 5px 0;
+        background-color: #fff;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+      }
+      .setting-btn {
+        padding: 2px 20px;
+        font-size: 14px;
+        word-break: keep-all;
+        &:hover {
+          background-color: #f0f0f0;
+          color: @color-active;
+        }
       }
     }
   }
@@ -328,16 +346,22 @@
     flex-direction: column;
     .list-header {
       display: flex;
-      font-size: 15px;
       padding: 4px 0;
       border-bottom: 1px solid #e8e8e8;
+      .cell {
+        font-size: 14px;
+      }
     }
     .list-wrap {
       flex: 1;
       overflow: overlay;
     }
     .cell {
-      padding: 4px 10px;
+      font-size: 12px;
+      line-height: 30px;
+      height: 30px;
+      box-sizing: border-box;
+      padding: 0px 10px;
     }
     .name {
       flex: 1;
@@ -350,11 +374,20 @@
     .size {
       text-align: center;
       width: 50px;
-      font-size: 12px;
     }
     .modify {
       width: 140px;
-      font-size: 12px;
+    }
+    .operate {
+      text-align: center;
+      width: 80px;
+      span {
+        display: inline-block;
+        padding: 0 4px;
+        &:hover {
+          color: red;
+        }
+      }
     }
     .list-item {
       cursor: pointer;

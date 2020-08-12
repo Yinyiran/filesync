@@ -25,9 +25,9 @@ function createWindow() {
     icon: path.join(__dirname, "public/favicon.ico")
   })
   process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'; // DISABLE SECURITY WARNINGS
-  
+
   win.webContents.openDevTools({ mode: 'undocked' });// Open the DevTools.
-  
+
   win.loadURL(`http://localhost:3000/`)
   win.setMenu(null);
 }

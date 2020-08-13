@@ -22,6 +22,7 @@ function createWindow() {
       nodeIntegration: true,
       // preload: path.join(__dirname, 'preload.js')
     },
+    enableRemoteModule: true,
     icon: path.join(__dirname, "public/favicon.ico")
   })
   process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'; // DISABLE SECURITY WARNINGS

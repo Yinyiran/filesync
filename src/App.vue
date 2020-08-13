@@ -85,7 +85,7 @@
   const Path = require("path");
   const process = require("process");
   import { FileIcon } from "./Enum";
-  import Service from "./service";
+  import { Util, HTTP } from "./service";
   export default {
     name: "App",
     data() {
@@ -97,6 +97,9 @@
       };
     },
     mounted() {
+      HTTP.get("/getFiles").then((res) => {
+        console.log(res);
+      });
       this.listType = localStorage.getItem("sync_dir_list") || "thumb";
       let syncPath = localStorage.getItem("sync_dir_path");
       if (syncPath) {
@@ -186,23 +189,24 @@
             if (res) {
               res.isFile = res.isFile();
               res.isDir = res.isDirectory();
-              res.Path = dirPath;
               res.fileName = name;
-              res.modifyTime = Service.DateFormat(res.mtime);
+              res.modifyTime = Util.DateFormat(res.mtime);
               // 文件夹
               if (res.isDir) {
+                res.Path = dirPath;
                 res.fileIcon = `./src/assets/img/DIR.svg`;
+                res.title = `名称：${name}\n修改日期：${res.modifyTime}`;
                 dirArr.push(res);
-                res.title = `名称：${name}\n 修改日期：${res.modifyTime}`;
               } else if (res.isFile) {
-                // 文件
-                res.fileSize = Service.FileSize(res.size);
+                // 文件   只有符合条件的文件才能显示
                 res.extName = name.slice(name.lastIndexOf(".") + 1);
                 let extObj = FileIcon.find((item) =>
                   item.data.includes(res.extName)
                 );
-                res.title = `名称：${name}\n大小：${res.fileSize}\n修改日期：${res.modifyTime}`;
                 if (extObj) {
+                  res.Path = Path.join(dirPath, name);
+                  res.fileSize = Util.FileSize(res.size);
+                  res.title = `名称：${name}\n大小：${res.fileSize}\n修改日期：${res.modifyTime}`;
                   res.fileIcon = `./src/assets/img/${extObj.type}.svg`;
                   fileArr.push(res);
                 }
@@ -212,6 +216,40 @@
           this.files = [].concat(dirArr, fileArr);
           // console.log(this.files);
         });
+      },
+      async upload(list) {
+        await UtilService.getFileHash(this.localfiles);
+        let hashs = this.localfiles.map((item) => item.filehash);
+        let { data } = await Data.post("/fileExist", hashs);
+        let formData = new FormData();
+        let upFile = [];
+        this.localfiles.forEach((item, index) => {
+          let existpath = data[item.filehash];
+          if (existpath) {
+            let index = this.imgList.indexOf(item.url);
+            if (index > -1) {
+              this.imgList.splice(index, 1, existpath);
+            } else {
+              this.imgList.push(existpath);
+            }
+          } else {
+            // const file = {
+            //   uri: url,
+            //   name: _.replace(url, /\.[doc,docx,odt,]+$/, ""),
+            //   type: "docx",
+            // };
+            formData.append(`file_${index}`, fs.createReadStream(filePath));
+            formData.append(`file_${index}`, `${item.filehash}`);
+            upFile.push(item);
+          }
+        });
+        let uplen = upFile.length;
+        if (uplen) {
+          let res = await UtilService.UpLoadFile(formData);
+          this.imgList = this.imgList.filter((url) => !url.startsWith("blob:"));
+          this.imgList.push(...res.data);
+        }
+        return this.imgList;
       },
     },
   };

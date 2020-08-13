@@ -1,4 +1,13 @@
-export default class Service {
+var crypto = require('crypto');
+var fs = require('fs');
+
+export class Util {
+  static GetCookie(name) {
+    var arr,
+      reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)");
+    if ((arr = document.cookie.match(reg))) return unescape(arr[2]);
+    else return null;
+  }
   /**
  * 日期格式化
  * @param date              要格式化的日期
@@ -91,5 +100,66 @@ export default class Service {
       }
     }
     return date;
+  }
+  /**
+   * 上传文件
+   * @param formData fileData
+   */
+  static UpLoadFile(formData) {
+    const config = {
+      headers: { "content-type": "multipart/form-data" },
+    };
+    return HTTP.post("/uploadFile", formData, config);
+  }
+  /**
+   * 获取文件hash
+   * @param paths 文件本地路径集合
+   */
+  static async getFileHash(paths: string[]) {
+    let promisArr = paths.map(path => {
+      return new Promise((resolve) => {
+        //读取一个Buffer
+        var fsHash = crypto.createHash('md5');
+        fs.readFile(path, (err, buffer) => {
+          fsHash.update(buffer);
+          var md5 = fsHash.digest('hex');
+          resolve({ [path]: md5 })
+        });
+      })
+    });
+    return Promise.all(promisArr);
+  }
+}
+// 数据获取
+export class HTTP {
+  /**
+   * get请求
+   * @param url api
+   * @param params 参数
+   */
+  static get(url, params) {
+    return fetch(`/api${url}?${new URLSearchParams(params)}`, {
+      headers: {
+        "x-csrf-token": Util.GetCookie("csrfToken"),
+        'content-type': 'application/json'
+      },
+      mode: 'cors',
+      credentials: "omit"
+    })
+  }
+  /**
+   * Post请求
+   * @param url 接口
+   * @param body 数据
+   * @param config 配置
+   */
+  static post(url, body, config: any) {
+    let headers = {
+      "x-csrf-token": Util.GetCookie("csrfToken"),
+      'content-type': 'application/json'
+    }
+
+    if (config.headers) Object.assign(headers, config.headers,);
+    return fetch(`/api${url}`, { body, headers, method: 'POST', mode: 'cors', credentials: "omit" })
   }
 }

@@ -143,8 +143,6 @@ export class HTTP {
         "x-csrf-token": Util.GetCookie("csrfToken"),
         'content-type': 'application/json'
       },
-      mode: 'cors',
-      credentials: "omit"
     })
   }
   /**
@@ -153,13 +151,13 @@ export class HTTP {
    * @param body 数据
    * @param config 配置
    */
-  static post(url, body, config: any) {
+  static post(url, data, config: any) {
     let headers = {
       "x-csrf-token": Util.GetCookie("csrfToken"),
       'content-type': 'application/json'
     }
 
-    if (config.headers) Object.assign(headers, config.headers,);
-    return fetch(`/api${url}`, { body, headers, method: 'POST', mode: 'cors', credentials: "omit" })
+    if (config && config.headers) Object.assign(headers, config.headers);
+    return fetch(`/api${url}`, { body: JSON.stringify(data), headers, method: 'POST' })
   }
 }

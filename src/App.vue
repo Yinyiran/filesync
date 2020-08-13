@@ -71,9 +71,10 @@
       <li>1.初始：保存文件夹，上传文件（递归），保存本地库（localPath,ID,LifeToken</li>
       <li>2.打开程序：检测所有文件是否都有本地库，没有本地库的文件和文件夹需要保存和上传</li>
       <li>3.打开程序：检测所有线上版本是否有本地库，没有就下载</li>
-      <li>4.同时删除本地文件</li>
+      <li>4.删除线上时询问是否同时删除本地文件</li>
       <li>5.isDelete的文件检测本地是否有，如果有就删除</li>
-      <li>6.记录电脑登录日志，只检测切换电脑期间所作的操作</li>
+      <li>6.记录电脑登录日志，电脑唯一uid，区分电脑</li>
+      <li>7.设计版本记录时间间隔，时间段内有文件就替换，超出时间就产生新版本</li>
     </ul>
   </div>
 </template>
@@ -97,9 +98,17 @@
       };
     },
     mounted() {
-      HTTP.get("/getFiles").then((res) => {
+      HTTP.get("/getSyncData", { DirID: 0 }).then((res) => {
         console.log(res);
       });
+      // let dirData = {
+      //   ParentID: 0,
+      //   DirName: "测试文件夹A",
+      //   ModifyTime: "2020-8-12 23:08:55",
+      // };
+      // HTTP.post("/saveDir", dirData).then((res) => {
+      //   console.log(res);
+      // });
       this.listType = localStorage.getItem("sync_dir_list") || "thumb";
       let syncPath = localStorage.getItem("sync_dir_path");
       if (syncPath) {

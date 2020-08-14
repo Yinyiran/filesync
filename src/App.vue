@@ -18,28 +18,27 @@
           <span v-show="index<crumbs.length-1" class="iconfont icon-right"></span>
         </span>
       </li>
-      <!-- <li class="headbtn iconfont icon-ziyuan" title="搜索文件"></li> -->
-      <span class="setting iconfont icon-shezhi" @click="showSetting =!showSetting ">
+      <span class="setting iconfont icon-reload" title="立即同步"></span>
+      <span class="setting iconfont icon-shezhi" @click="showSetting =!showSetting" title="设置">
         <ul class="setting-menu" v-show="showSetting">
           <li class="setting-btn" @click="setSyncDir" title="设置需要同步的文件夹">设置同步文件夹</li>
+          <li class="setting-btn">同步间隔时间</li>
           <li class="setting-btn">垃圾箱</li>
-          <li class="setting-btn" v-if="listType !== 'list'" @click="setListType('list')">缩略图显示</li>
-          <li class="setting-btn" v-else @click="setListType('thumb')">列表显示</li>
+          <li class="setting-btn" @click="setListType()">{{isList?`缩略图显示`:`列表显示`}}</li>
         </ul>
       </span>
-      <!-- <li class="headbtn iconfont icon-lajixiang" title="垃圾箱，查看已经删除的文件"></li> -->
     </ul>
     <!-- 缩略图 -->
-    <div class="file-thumb" v-if="files.length && listType == 'thumb'">
+    <div class="file-thumb" v-if="files.length && !isList">
       <div class="file-item" v-for="(item,index) in files" :key="index" :title="item.title">
         <div class="file-content" @dblclick="fileClick(item)">
           <img class="file-icon" :src="item.fileIcon" />
-          <span class="file-name">{{item.fileName}}</span>
+          <span class="file-name">{{item.FileName}}</span>
         </div>
       </div>
     </div>
     <!-- 列表 -->
-    <div class="file-list" v-if="files.length && listType=='list'">
+    <div class="file-list" v-if="files.length && isList">
       <div class="list-header">
         <span class="cell name">名称</span>
         <span class="cell size">大小</span>
@@ -55,10 +54,10 @@
         >
           <span class="cell name">
             <img class="file-icon" :src="item.fileIcon" />
-            <span class="file-name" :title="item.fileName">{{item.fileName}}</span>
+            <span class="file-name" :title="item.FileName">{{item.FileName}}</span>
           </span>
           <span class="cell size">{{item.fileSize}}</span>
-          <span class="cell modify">{{item.modifyTime}}</span>
+          <span class="cell modify">{{item.ModifyTime}}</span>
           <span class="cell operate">
             <span v-if="item.isDelete">恢复</span>
             <span v-else>删除</span>
@@ -80,11 +79,10 @@
 </template>
 
 <script>
-  const chokidar = require("chokidar");
+  const Chokidar = require("chokidar");
   const { BrowserWindow, dialog } = require("electron").remote;
   const Fs = require("fs");
   const Path = require("path");
-  const process = require("process");
   import { FileIcon } from "./Enum";
   import { Util, HTTP } from "./service";
   export default {
@@ -93,11 +91,12 @@
       return {
         files: [],
         crumbs: [],
-        listType: "",
+        isList: false,
         showSetting: false,
       };
     },
     mounted() {
+      this.upload(this.filesList());
       HTTP.get("/getSyncData", { DirID: 0 }).then((res) => {
         console.log(res);
       });
@@ -109,7 +108,9 @@
       // HTTP.post("/saveDir", dirData).then((res) => {
       //   console.log(res);
       // });
-      this.listType = localStorage.getItem("sync_dir_list") || "thumb";
+      let cacheType = localStorage.getItem("sync_dir_list");
+      this.isList = cacheType === "true" ? true : false;
+
       let syncPath = localStorage.getItem("sync_dir_path");
       if (syncPath) {
         this.crumbs.push({
@@ -118,7 +119,7 @@
         });
         this.getDirAndFile(syncPath);
 
-        // var watcher = chokidar.watch(syncPath, {
+        // var watcher = Chokidar.watch(syncPath, {
         //   ignored: /[\/\\]\./,
         //   persistent: true,
         // });
@@ -154,16 +155,16 @@
         this.crumbs.splice(-1);
         this.getDirAndFile(crumbObj.dirPath);
       },
-      setListType(type) {
-        localStorage.setItem("sync_dir_list", type);
-        this.listType = type;
+      setListType() {
+        this.isList = !this.isList;
+        localStorage.setItem("sync_dir_list", this.isList);
       },
       fileClick(item) {
         if (item.isDir) {
-          let path = Path.join(item.Path, item.fileName);
+          let path = Path.join(item.path, item.FileName);
           this.getDirAndFile(path);
           this.crumbs.push({
-            dirName: item.fileName,
+            dirName: item.FileName,
             dirPath: path,
           });
         } else {
@@ -198,13 +199,13 @@
             if (res) {
               res.isFile = res.isFile();
               res.isDir = res.isDirectory();
-              res.fileName = name;
-              res.modifyTime = Util.DateFormat(res.mtime);
+              res.FileName = name;
+              res.ModifyTime = Util.DateFormat(res.mtime);
               // 文件夹
               if (res.isDir) {
-                res.Path = dirPath;
+                res.path = dirPath;
                 res.fileIcon = `./src/assets/img/DIR.svg`;
-                res.title = `名称：${name}\n修改日期：${res.modifyTime}`;
+                res.title = `名称：${name}\n修改日期：${res.ModifyTime}`;
                 dirArr.push(res);
               } else if (res.isFile) {
                 // 文件   只有符合条件的文件才能显示
@@ -213,9 +214,9 @@
                   item.data.includes(res.extName)
                 );
                 if (extObj) {
-                  res.Path = Path.join(dirPath, name);
+                  res.path = Path.join(dirPath, name);
                   res.fileSize = Util.FileSize(res.size);
-                  res.title = `名称：${name}\n大小：${res.fileSize}\n修改日期：${res.modifyTime}`;
+                  res.title = `名称：${name}\n大小：${res.fileSize}\n修改日期：${res.ModifyTime}`;
                   res.fileIcon = `./src/assets/img/${extObj.type}.svg`;
                   fileArr.push(res);
                 }
@@ -227,38 +228,110 @@
         });
       },
       async upload(list) {
-        await UtilService.getFileHash(this.localfiles);
-        let hashs = this.localfiles.map((item) => item.filehash);
-        let { data } = await Data.post("/fileExist", hashs);
-        let formData = new FormData();
-        let upFile = [];
-        this.localfiles.forEach((item, index) => {
-          let existpath = data[item.filehash];
-          if (existpath) {
-            let index = this.imgList.indexOf(item.url);
-            if (index > -1) {
-              this.imgList.splice(index, 1, existpath);
-            } else {
-              this.imgList.push(existpath);
-            }
-          } else {
-            // const file = {
-            //   uri: url,
-            //   name: _.replace(url, /\.[doc,docx,odt,]+$/, ""),
-            //   type: "docx",
-            // };
-            formData.append(`file_${index}`, fs.createReadStream(filePath));
-            formData.append(`file_${index}`, `${item.filehash}`);
-            upFile.push(item);
-          }
+        let hashs = Util.GetFileHash(list.map((item) => item.path));
+        list.forEach((item, index) => {
+          item.FileHash = hashs[index];
         });
-        let uplen = upFile.length;
-        if (uplen) {
-          let res = await UtilService.UpLoadFile(formData);
-          this.imgList = this.imgList.filter((url) => !url.startsWith("blob:"));
-          this.imgList.push(...res.data);
-        }
-        return this.imgList;
+        // let { data } = await HTTP.post("/fileExist", hashs);
+        // let upFile = [];
+
+        // let uplen = upFile.length;
+        // if (uplen) {
+        let res = await Util.UpLoadFile(list);
+        console.log(res);
+        // }
+      },
+      filesList() {
+        return [
+          {
+            dev: 2354241344,
+            mode: 33206,
+            nlink: 1,
+            uid: 0,
+            gid: 0,
+            rdev: 0,
+            blksize: 4096,
+            ino: 5066549581616972,
+            size: 5,
+            blocks: 0,
+            atimeMs: 1597377060017.2466,
+            mtimeMs: 1597377059397.383,
+            ctimeMs: 1597377059397.383,
+            birthtimeMs: 1597377031112.276,
+            atime: "2020-08-14T03:51:00.017Z",
+            mtime: "2020-08-14T03:50:59.397Z",
+            ctime: "2020-08-14T03:50:59.397Z",
+            birthtime: "2020-08-14T03:50:31.112Z",
+            isFile: true,
+            isDir: false,
+            FileName: "111.txt",
+            ModifyTime: "2020-08-14 11:50:59",
+            extName: "txt",
+            path: "C:\\Users\\Chris\\Desktop\\pdm\\111.txt",
+            fileSize: "5B",
+            title: "名称：111.txt\n大小：5B\n修改日期：2020-08-14 11:50:59",
+            fileIcon: "./src/assets/img/txt.svg",
+          },
+          {
+            dev: 2354241344,
+            mode: 33206,
+            nlink: 1,
+            uid: 0,
+            gid: 0,
+            rdev: 0,
+            blksize: 4096,
+            ino: 2533274790967496,
+            size: 20992,
+            blocks: 48,
+            atimeMs: 1597377031172.26,
+            mtimeMs: 1564230013788.047,
+            ctimeMs: 1591589212749.7786,
+            birthtimeMs: 1564230013756.0452,
+            atime: "2020-08-14T03:50:31.172Z",
+            mtime: "2019-07-27T12:20:13.788Z",
+            ctime: "2020-06-08T04:06:52.750Z",
+            birthtime: "2019-07-27T12:20:13.756Z",
+            isFile: true,
+            isDir: false,
+            FileName: "ceshiceshi.ppt",
+            ModifyTime: "2019-07-27 20:20:13",
+            extName: "ppt",
+            path: "C:\\Users\\Chris\\Desktop\\pdm\\ceshiceshi.ppt",
+            fileSize: "21K",
+            title:
+              "名称：ceshiceshi.ppt\n大小：21K\n修改日期：2019-07-27 20:20:13",
+            fileIcon: "./src/assets/img/ppt.svg",
+          },
+          {
+            dev: 2354241344,
+            mode: 33206,
+            nlink: 1,
+            uid: 0,
+            gid: 0,
+            rdev: 0,
+            blksize: 4096,
+            ino: 4785074604348146,
+            size: 5,
+            blocks: 0,
+            atimeMs: 1597313703854.261,
+            mtimeMs: 1563002591394.127,
+            ctimeMs: 1591589212749.7786,
+            birthtimeMs: 1563002586888.322,
+            atime: "2020-08-13T10:15:03.854Z",
+            mtime: "2019-07-13T07:23:11.394Z",
+            ctime: "2020-06-08T04:06:52.750Z",
+            birthtime: "2019-07-13T07:23:06.888Z",
+            isFile: true,
+            isDir: false,
+            FileName: "dfSD.txt",
+            ModifyTime: "2019-07-13 15:23:11",
+            extName: "txt",
+            path: "C:\\Users\\Chris\\Desktop\\pdm\\dfSD.txt",
+            fileSize: "5B",
+            title: "名称：dfSD.txt\n大小：5B\n修改日期：2019-07-13 15:23:11",
+            fileIcon: "./src/assets/img/txt.svg",
+          },
+        ];
       },
     },
   };

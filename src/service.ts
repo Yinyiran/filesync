@@ -1,10 +1,10 @@
-var crypto = require('crypto');
-var fs = require('fs');
+const Crypto = require('crypto');
+const Fs = require("fs");
 
 export class Util {
   static GetCookie(name) {
-    var arr,
-      reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)");
+    let arr;
+    let reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)");
     if ((arr = document.cookie.match(reg))) return unescape(arr[2]);
     else return null;
   }
@@ -105,59 +105,67 @@ export class Util {
    * 上传文件
    * @param formData fileData
    */
-  static UpLoadFile(formData) {
-    const config = {
-      headers: { "content-type": "multipart/form-data" },
-    };
-    return HTTP.post("/uploadFile", formData, config);
+  static UpLoadFile(list: [any]) {
+    let formData = new FormData();
+    list.forEach((item, index) => {
+      formData.append(`file_${index}`, Fs.createReadStream(item.path));
+      // formData.append(`file_${index}`, `${item.filehash}FileName, FileHash, DirID, ModifyTime`);
+    });
+    return HTTP.post("/uploadFile", formData, false);
   }
   /**
    * 获取文件hash
    * @param paths 文件本地路径集合
    */
-  static async getFileHash(paths: string[]) {
+  static async GetFileHash(paths: string[]) {
     let promisArr = paths.map(path => {
       return new Promise((resolve) => {
         //读取一个Buffer
-        var fsHash = crypto.createHash('md5');
-        fs.readFile(path, (err, buffer) => {
+        const fsHash = Crypto.createHash('md5');
+        Fs.readFile(path, (err, buffer) => {
           fsHash.update(buffer);
-          var md5 = fsHash.digest('hex');
-          resolve({ [path]: md5 })
+          const md5 = fsHash.digest('hex');
+          resolve(md5)
         });
       })
     });
     return Promise.all(promisArr);
   }
+  /**
+   * 生成唯一ID（32位）
+   */
+  static GetUID() {
+    return Crypto.randomBytes(16).toString("hex");
+  }
 }
-// 数据获取
+// 数据获取服务
 export class HTTP {
   /**
    * get请求
    * @param url api
    * @param params 参数
    */
-  static get(url, params) {
-    return fetch(`/api${url}?${new URLSearchParams(params)}`, {
-      headers: {
-        "x-csrf-token": Util.GetCookie("csrfToken"),
-        'content-type': 'application/json'
-      },
+  static async get(url: string, params: any) {
+    const headers = {
+      "x-csrf-token": Util.GetCookie("csrfToken"),
+    }
+    return fetch(`/api${url}?${new URLSearchParams(params)}`, { headers }).then(response => {
+      return response.json(); // responese.json() 是promise
     })
   }
   /**
    * Post请求
    * @param url 接口
    * @param body 数据
-   * @param config 配置
    */
-  static post(url, data, config: any) {
-    let headers = {
-      "x-csrf-token": Util.GetCookie("csrfToken"),
-      'content-type': 'application/json'
-    }
-
-    if (config && config.headers) Object.assign(headers, config.headers);
-    return fetch(`/api${url}`, { body: JSON.stringify(data), headers, method: 'POST' })
+  static async post(url: string, data: any, isString: Boolean = true) {
+    let config = {
+      body: isString ? JSON.stringify(data) : data,
+      headers: { "x-csrf-token": Util.GetCookie("csrfToken") },
+      method: 'POST'
+    };
+    return fetch(`/api${url}`, config).then(response => {
+      return response.json(); // responese.json() 是promise
+    })
   }
 }

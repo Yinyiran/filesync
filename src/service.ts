@@ -1,3 +1,4 @@
+import Axios from "axios"
 const Crypto = require('crypto');
 const Fs = require("fs");
 
@@ -107,11 +108,25 @@ export class Util {
    */
   static UpLoadFile(list: [any]) {
     let formData = new FormData();
-    list.forEach((item, index) => {
-      formData.append(`file_${index}`, Fs.createReadStream(item.path));
+    list.forEach((item) => {
+      //   console.log(item.path);
+      //   console.log(Fs.createReadStream(item.path));
+      let data = Fs.readFileSync(item.path);
+      let file = new File([data], 'test.jpg', { type: 'image/jpg' })
+      formData.append('file', file);
+      // console.log(item.path);
+
+      // formData.append(`file`, Fs.createReadStream(item.path));
+      // formData.append(`AAA`, "BBB");
       // formData.append(`file_${index}`, `${item.filehash}FileName, FileHash, DirID, ModifyTime`);
     });
-    return HTTP.post("/uploadFile", formData, false);
+    return Axios.post('/api/uploadFile', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        "Authorizition": Util.GetCookie("Authorizition")
+      }
+    });
+    // return HTTP.post("/uploadFile", formData, config);
   }
   /**
    * 获取文件hash
@@ -119,13 +134,17 @@ export class Util {
    */
   static async GetFileHash(paths: string[]) {
     let promisArr = paths.map(path => {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         //读取一个Buffer
         const fsHash = Crypto.createHash('md5');
         Fs.readFile(path, (err, buffer) => {
-          fsHash.update(buffer);
-          const md5 = fsHash.digest('hex');
-          resolve(md5)
+          if (err) {
+            reject(err);
+          } else {
+            fsHash.update(buffer);
+            const md5 = fsHash.digest('hex');
+            resolve(md5)
+          }
         });
       })
     });
@@ -145,27 +164,73 @@ export class HTTP {
    * @param url api
    * @param params 参数
    */
-  static async get(url: string, params: any) {
-    const headers = {
-      "x-csrf-token": Util.GetCookie("csrfToken"),
-    }
-    return fetch(`/api${url}?${new URLSearchParams(params)}`, { headers }).then(response => {
-      return response.json(); // responese.json() 是promise
-    })
+  static async get(url, params) {
+    return Axios.get(`/api${url}`, { params })
   }
   /**
    * Post请求
    * @param url 接口
    * @param body 数据
    */
-  static async post(url: string, data: any, isString: Boolean = true) {
-    let config = {
-      body: isString ? JSON.stringify(data) : data,
-      headers: { "x-csrf-token": Util.GetCookie("csrfToken") },
-      method: 'POST'
-    };
-    return fetch(`/api${url}`, config).then(response => {
-      return response.json(); // responese.json() 是promise
-    })
+  static async post(url, body, config: any = {}) {
+    const headers = {
+      "Authorizition": Util.GetCookie("Authorizition")
+    }
+    if (config.headers) Object.assign(config.headers, headers);
+    else config.headers = headers;
+    return Axios.post(`/api${url}`, body, config)
   }
 }
+
+// // 数据获取服务
+// export class HTTP {
+//   /**
+//    * get请求
+//    * @param url api
+//    * @param params 参数
+//    */
+//   static async get(url: string, params: any) {
+//     const headers = {
+//       "Authorizition": Util.GetCookie("Authorizition"),
+//     }
+//     return fetch(`/api${url}?${new URLSearchParams(params)}`, { headers }).then(response => {
+//       return response.json(); // responese.json() 是promise
+//     })
+//   }
+//   /**
+//    * Post请求
+//    * @param url 接口
+//    * @param body 数据
+//    */
+//   static async post(url: string, data: any) {
+//     let config = {
+//       method: 'POST',
+//       body: JSON.stringify(data),
+//       headers: {
+//         "Authorizition": Util.GetCookie("Authorizition"),
+//         'Content-Type': 'application/json'
+//       },
+//     };
+//     return fetch(`/api${url}`, config).then(response => {
+//       return response.json(); // responese.json() 是promise
+//     })
+//   }
+//   /**
+//    * Post请求
+//    * @param url 接口
+//    * @param body 数据
+//    */
+//   static async put(url: string, formdata: any) {
+//     let config = {
+//       method: 'POST',
+//       body: formdata,
+//       headers: {
+//         "Authorizition": Util.GetCookie("Authorizition"),
+//       },
+//     };
+
+//     return fetch(`/api${url}`, config).then(response => {
+//       return response.json(); // responese.json() 是promise
+//     })
+//   }
+// }

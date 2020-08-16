@@ -11,6 +11,8 @@
     "build": "vite build"
   },
   "dependencies": {
+    "axios": "^0.19.2",
+    "form-data": "^3.0.0",
     "vue": "^3.0.0-rc.1"
   },
   "devDependencies": {

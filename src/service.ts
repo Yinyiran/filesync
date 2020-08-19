@@ -1,6 +1,7 @@
 import Axios from "axios"
 const Crypto = require('crypto');
 const Fs = require("fs");
+// const FormData = require("form-data");
 
 export class Util {
   static GetCookie(name) {
@@ -17,15 +18,8 @@ export class Util {
  * @constructor
  */
   static DateFormat(date: any, format: string = "yyyy-MM-dd HH:mm:ss"): string | any {
-    if (!date) {
-      return date;
-    }
-    if (typeof date === "string" && !date.trim()) {
-      return "";
-    }
-    if (!format) {
-      format = 'yyyy-MM-dd';
-    }
+    if (!date) return date;
+    if (typeof date === "string" && !date.trim()) return "";
     //修改为支持字符串格式的日期或date对象
     date = this.DateParse(date);
 
@@ -77,10 +71,6 @@ export class Util {
       if (typeof date === "number") {
         date = new Date(date);
       } else if (typeof date === "string" && date !== "") {
-        // if (~date.indexOf("T")) {
-        //    // date = date.replace("T", " ");
-        //   //return new Date(Date.parse(date));
-        // }
         date = date.replace(/\..+$/g, "");
         if ((/\d{4}[^\d]\d{1,2}$/).test(date)) {
           date = date + "/01";
@@ -97,7 +87,6 @@ export class Util {
         date = date.replace(/(^|[^\d])(\d)(?=[^\d]|$)/ig, "$10$2");
         date = date.replace(/[^\d:+\-T ]/g, "-");
         date = new Date(date);
-
       }
     }
     return date;
@@ -107,26 +96,25 @@ export class Util {
    * @param formData fileData
    */
   static UpLoadFile(list: [any]) {
-    let formData = new FormData();
+    let form = new FormData();
     list.forEach((item) => {
-      //   console.log(item.path);
-      //   console.log(Fs.createReadStream(item.path));
-      let data = Fs.readFileSync(item.path);
-      let file = new File([data], 'test.jpg', { type: 'image/jpg' })
-      formData.append('file', file);
-      // console.log(item.path);
-
-      // formData.append(`file`, Fs.createReadStream(item.path));
-      // formData.append(`AAA`, "BBB");
-      // formData.append(`file_${index}`, `${item.filehash}FileName, FileHash, DirID, ModifyTime`);
+      const stream = Fs.createReadStream(item.path);
+      form.append('file', stream);
     });
-    return Axios.post('/api/uploadFile', formData, {
+    // const formHeaders = form.getHeaders();
+    return Axios.post('/api/uploadFile', form, {
+      // "Authorizition": Util.GetCookie("Authorizition")
       headers: {
+        "Authorizition": Util.GetCookie("Authorizition"),
         'Content-Type': 'multipart/form-data',
-        "Authorizition": Util.GetCookie("Authorizition")
+        // ...formHeaders
       }
     });
-    // return HTTP.post("/uploadFile", formData, config);
+    // https://zhuanlan.zhihu.com/p/120834588
+    // https://www.cnblogs.com/tugenhua0707/p/10828869.html
+    // https://github.com/request/request#multipartform-data-multipart-form-uploads
+    // https://segmentfault.com/a/1190000020654277
+    // return HTTP.post("/uploadFile", form, config);
   }
   /**
    * 获取文件hash

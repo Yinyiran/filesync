@@ -97,11 +97,17 @@ export class Util {
    */
   static UpLoadFile(list: [any]) {
     let form = new FormData();
-    list.forEach((item) => {
-      const stream = Fs.createReadStream(item.path);
-      form.append('file', stream);
-    });
-    // const formHeaders = form.getHeaders();
+    list.forEach(item => {
+      console.log(Fs.readFileSync(item.path));
+      
+      let file = new File([Fs.readFileSync(item.path)], item.path.split('/').reverse()[0], { type: 'image/jpg' })
+      form.append("file",file)
+      console.log(file);
+      console.log(form);
+      
+      // form.push(file)
+    })
+    // https://juejin.im/post/6844904046436843527
     return Axios.post('/api/uploadFile', form, {
       // "Authorizition": Util.GetCookie("Authorizition")
       headers: {

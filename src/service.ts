@@ -1,5 +1,6 @@
 import Axios from "axios"
 const Crypto = require('crypto');
+const Mime = require("mime")
 const Fs = require("fs");
 // const FormData = require("form-data");
 
@@ -96,26 +97,44 @@ export class Util {
    * @param formData fileData
    */
   static UpLoadFile(list: [any]) {
-    let form = new FormData();
     list.forEach(item => {
-      console.log(Fs.readFileSync(item.path));
-      
-      let file = new File([Fs.readFileSync(item.path)], item.path.split('/').reverse()[0], { type: 'image/jpg' })
-      form.append("file",file)
-      console.log(file);
-      console.log(form);
-      
-      // form.push(file)
-    })
-    // https://juejin.im/post/6844904046436843527
-    return Axios.post('/api/uploadFile', form, {
-      // "Authorizition": Util.GetCookie("Authorizition")
-      headers: {
-        "Authorizition": Util.GetCookie("Authorizition"),
-        'Content-Type': 'multipart/form-data',
-        // ...formHeaders
+      const formData = {
+        name: "file",
+        file: {
+          value: Fs.createReadStream(item.path),
+          options: {
+            filename: item.FileName,
+            contentType: Mime.getType(item.extName)
+          }
+        }
       }
-    });
+      // 写入内容
+      const fileStream = Fs.createReadStream(item.path);
+      fileStream.pipe(HTTP.put('/uploadFile', formData), { end: false });
+      fileStream.on('end', function () {
+        // 写入尾部
+        console.log("Stream-end")
+        // request.end('\r\n--' + boundaryKey + '--' + '\r\n');
+      });
+    })
+    // // create a read stream
+    // var readable = Fs.createReadStream(list[0].path);
+    // let formData = {
+    //   api_password: "abc123",
+    //   file: readable
+    // }
+    // HTTP.put('/uploadFile', form)
+    // send something to client
+
+    // https://juejin.im/post/6844904046436843527
+    // return Axios.post('/api/uploadFile', form, {
+    //   // "Authorizition": Util.GetCookie("Authorizition")
+    //   headers: {`
+    //     "Authorizition": Util.GetCookie("Authorizition"),
+    //     'Content-Type': 'multipart/form-data',`
+    //     // ...formHeaders
+    //   }
+    // });
     // https://zhuanlan.zhihu.com/p/120834588
     // https://www.cnblogs.com/tugenhua0707/p/10828869.html
     // https://github.com/request/request#multipartform-data-multipart-form-uploads
@@ -151,31 +170,6 @@ export class Util {
     return Crypto.randomBytes(16).toString("hex");
   }
 }
-// 数据获取服务
-export class HTTP {
-  /**
-   * get请求
-   * @param url api
-   * @param params 参数
-   */
-  static async get(url, params) {
-    return Axios.get(`/api${url}`, { params })
-  }
-  /**
-   * Post请求
-   * @param url 接口
-   * @param body 数据
-   */
-  static async post(url, body, config: any = {}) {
-    const headers = {
-      "Authorizition": Util.GetCookie("Authorizition")
-    }
-    if (config.headers) Object.assign(config.headers, headers);
-    else config.headers = headers;
-    return Axios.post(`/api${url}`, body, config)
-  }
-}
-
 // // 数据获取服务
 // export class HTTP {
 //   /**
@@ -183,48 +177,73 @@ export class HTTP {
 //    * @param url api
 //    * @param params 参数
 //    */
-//   static async get(url: string, params: any) {
+//   static async get(url, params) {
+//     return Axios.get(`/api${url}`, { params })
+//   }
+//   /**
+//    * Post请求
+//    * @param url 接口
+//    * @param body 数据
+//    */
+//   static async post(url, body, config: any = {}) {
 //     const headers = {
-//       "Authorizition": Util.GetCookie("Authorizition"),
+//       "Authorizition": Util.GetCookie("Authorizition")
 //     }
-//     return fetch(`/api${url}?${new URLSearchParams(params)}`, { headers }).then(response => {
-//       return response.json(); // responese.json() 是promise
-//     })
-//   }
-//   /**
-//    * Post请求
-//    * @param url 接口
-//    * @param body 数据
-//    */
-//   static async post(url: string, data: any) {
-//     let config = {
-//       method: 'POST',
-//       body: JSON.stringify(data),
-//       headers: {
-//         "Authorizition": Util.GetCookie("Authorizition"),
-//         'Content-Type': 'application/json'
-//       },
-//     };
-//     return fetch(`/api${url}`, config).then(response => {
-//       return response.json(); // responese.json() 是promise
-//     })
-//   }
-//   /**
-//    * Post请求
-//    * @param url 接口
-//    * @param body 数据
-//    */
-//   static async put(url: string, formdata: any) {
-//     let config = {
-//       method: 'POST',
-//       body: formdata,
-//       headers: {
-//         "Authorizition": Util.GetCookie("Authorizition"),
-//       },
-//     };
-
-//     return fetch(`/api${url}`, config).then(response => {
-//       return response.json(); // responese.json() 是promise
-//     })
+//     if (config.headers) Object.assign(config.headers, headers);
+//     else config.headers = headers;
+//     return Axios.post(`/api${url}`, body, config)
 //   }
 // }
+
+// 数据获取服务
+export class HTTP {
+  /**
+   * get请求
+   * @param url api
+   * @param params 参数
+   */
+  static async get(url: string, params: any) {
+    const headers = {
+      "Authorizition": Util.GetCookie("Authorizition"),
+    }
+    return fetch(`/api${url}?${new URLSearchParams(params)}`, { headers }).then(response => {
+      return response.json(); // responese.json() 是promise
+    })
+  }
+  /**
+   * Post请求
+   * @param url 接口
+   * @param body 数据
+   */
+  static async post(url: string, data: any) {
+    let config = {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: {
+        "Authorizition": Util.GetCookie("Authorizition"),
+        'Content-Type': 'application/json'
+      },
+    };
+    return fetch(`/api${url}`, config).then(response => {
+      return response.json(); // responese.json() 是promise
+    })
+  }
+  /**
+   * Post请求
+   * @param url 接口
+   * @param body 数据
+   */
+  static async put(url: string, formdata: any) {
+    let config = {
+      method: 'PUT',
+      body: formdata,
+      headers: {
+        "Authorizition": Util.GetCookie("Authorizition"),
+      },
+    };
+
+    return fetch(`/api${url}`, config).then(response => {
+      return response.json(); // responese.json() 是promise
+    })
+  }
+}

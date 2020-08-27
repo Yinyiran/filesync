@@ -22,9 +22,9 @@
       <span class="setting iconfont icon-shezhi" @click="showSetting =!showSetting" title="设置">
         <ul class="setting-menu" v-show="showSetting">
           <li class="setting-btn" @click="setSyncDir" title="设置需要同步的文件夹">设置同步文件夹</li>
-          <li class="setting-btn">同步间隔时间</li>
-          <li class="setting-btn">垃圾箱</li>
           <li class="setting-btn" @click="setListType()">{{isList?`缩略图显示`:`列表显示`}}</li>
+          <li class="setting-btn disabled">同步间隔时间</li>
+          <li class="setting-btn disabled">垃圾箱</li>
         </ul>
       </span>
     </ul>
@@ -66,7 +66,7 @@
       </div>
     </div>
     <div class="empty-tip" v-if="files.length===0">此文件夹为空</div>
-    <ul style="padding:20px">
+    <!-- <ul style="padding:20px">
       <li>1.初始：保存文件夹，上传文件（递归），保存本地库（localPath,ID,LifeToken</li>
       <li>2.打开程序：检测所有文件是否都有本地库，没有本地库的文件和文件夹需要保存和上传</li>
       <li>3.打开程序：检测所有线上版本是否有本地库，没有就下载</li>
@@ -74,7 +74,7 @@
       <li>5.isDelete的文件检测本地是否有，如果有就删除</li>
       <li>6.记录电脑登录日志，电脑唯一uid，区分电脑</li>
       <li>7.设计版本记录时间间隔，时间段内有文件就替换，超出时间就产生新版本</li>
-    </ul>
+    </ul>-->
   </div>
 </template>
 
@@ -83,8 +83,12 @@
   const { BrowserWindow, dialog } = require("electron").remote;
   const Fs = require("fs");
   const Path = require("path");
+  const FormData = require("form-data");
+  const Request = require("request");
+
   import { FileIcon } from "./Enum";
   import { Util, HTTP } from "./service";
+
   export default {
     name: "App",
     data() {
@@ -93,10 +97,42 @@
         crumbs: [],
         isList: false,
         showSetting: false,
+        // 通过Fs.filestate
+        filesList: [
+          {
+            dev: 2354241344,
+            mode: 33206,
+            nlink: 1,
+            uid: 0,
+            gid: 0,
+            rdev: 0,
+            blksize: 4096,
+            ino: 5066549581616972,
+            size: 5,
+            blocks: 0,
+            atimeMs: 1597377060017.2466,
+            mtimeMs: 1597377059397.383,
+            ctimeMs: 1597377059397.383,
+            birthtimeMs: 1597377031112.276,
+            atime: "2020-08-14T03:51:00.017Z",
+            mtime: "2020-08-14T03:50:59.397Z",
+            ctime: "2020-08-14T03:50:59.397Z",
+            birthtime: "2020-08-14T03:50:31.112Z",
+            isFile: true,
+            isDir: false,
+            FileName: "111.txt",
+            ModifyTime: "2020-08-14 11:50:59",
+            extName: "txt",
+            path: "D:\\111.txt",
+            fileSize: "5B",
+            title: "名称：111.txt\n大小：5B\n修改日期：2020-08-14 11:50:59",
+            fileIcon: "./src/assets/img/txt.svg",
+          },
+        ],
       };
     },
     mounted() {
-      this.upload(this.filesList());
+      this.uploadFile(this.filesList);
       // HTTP.get("/getSyncData", { DirID: 0 }).then((res) => {
       //   console.log(res);
       // });
@@ -149,6 +185,75 @@
       }
     },
     methods: {
+      // 上传文件
+      async uploadFile(list) {
+        let hashs = await Util.GetFileHash(list.map((item) => item.path));
+        let attachments = [];
+        list.forEach((item, index) => {
+          item.FileHash = hashs[index];
+          attachments.push(Fs.createReadStream(item.path));
+        });
+        const formData = {
+          my_field: "my_value",
+          attachments,
+        };
+        Request.post(
+          { url: "http://localhsot:6000/api/uploadFile", formData },
+          function optionalCallback(err, httpResponse, body) {
+            debugger
+            if (err) {
+              return console.error("upload failed:", err);
+            }
+            console.log("Upload successful!  Server responded with:", body);
+          }
+        );
+        // let { data } = await HTTP.post("/fileExist", hashs);
+        // let upFile = [];
+
+        // let uplen = upFile.length;
+        // if (uplen) {
+        // create a read stream
+        // Request.post("/api/uploadFile", formData);
+        // const result = await HTTP.put("/uploadFile", formData);
+
+        // return Axios.post("/api/uploadFile", form, {
+        //   // "Authorizition": Util.GetCookie("Authorizition")
+        //   headers: {
+        //     Authorizition: Util.GetCookie("Authorizition"),
+        //     "Content-Type": "multipart/form-data",
+        //     // ...formHeaders
+        //   },
+        // });
+
+        // https://juejin.im/post/6844904046436843527
+        // list.forEach((item) => {
+        //   const formData = {
+        //     name: "file",
+        //     file: {
+        //       value: Fs.createReadStream(item.path),
+        //       options: {
+        //         filename: item.FileName,
+        //         contentType: Mime.getType(item.extName),
+        //       },
+        //     },
+        //   };
+        //   // 写入内容
+        //   const fileStream = Fs.createReadStream(item.path);
+        //   fileStream.pipe(HTTP.put("/uploadFile", formData), { end: false });
+        //   fileStream.on("end", function () {
+        //     // 写入尾部
+        //     console.log("Stream-end");
+        //     // request.end('\r\n--' + boundaryKey + '--' + '\r\n');
+        //   });
+        // });
+        // https://zhuanlan.zhihu.com/p/120834588
+        // https://www.cnblogs.com/tugenhua0707/p/10828869.html
+        // https://github.com/request/request#multipartform-data-multipart-form-uploads
+        // https://segmentfault.com/a/1190000020654277
+        // return HTTP.post("/uploadFile", form, config);
+        // console.log(res);
+        // }
+      },
       backdir() {
         if (this.crumbs.length == 1) return;
         let crumbObj = this.crumbs[this.crumbs.length - 2];
@@ -226,83 +331,6 @@
           this.files = [].concat(dirArr, fileArr);
           // console.log(this.files);
         });
-      },
-      async upload(list) {
-        let hashs = Util.GetFileHash(list.map((item) => item.path));
-        list.forEach((item, index) => {
-          item.FileHash = hashs[index];
-        });
-        // let { data } = await HTTP.post("/fileExist", hashs);
-        // let upFile = [];
-
-        // let uplen = upFile.length;
-        // if (uplen) {
-        let res = await Util.UpLoadFile(list);
-        console.log(res);
-        // }
-      },
-      filesList() {
-        return [
-          {
-            dev: 2354241344,
-            mode: 33206,
-            nlink: 1,
-            uid: 0,
-            gid: 0,
-            rdev: 0,
-            blksize: 4096,
-            ino: 5066549581616972,
-            size: 5,
-            blocks: 0,
-            atimeMs: 1597377060017.2466,
-            mtimeMs: 1597377059397.383,
-            ctimeMs: 1597377059397.383,
-            birthtimeMs: 1597377031112.276,
-            atime: "2020-08-14T03:51:00.017Z",
-            mtime: "2020-08-14T03:50:59.397Z",
-            ctime: "2020-08-14T03:50:59.397Z",
-            birthtime: "2020-08-14T03:50:31.112Z",
-            isFile: true,
-            isDir: false,
-            FileName: "111.txt",
-            ModifyTime: "2020-08-14 11:50:59",
-            extName: "txt",
-            path: "C:\\Users\\Chris\\Desktop\\pdm\\111.txt",
-            fileSize: "5B",
-            title: "名称：111.txt\n大小：5B\n修改日期：2020-08-14 11:50:59",
-            fileIcon: "./src/assets/img/txt.svg",
-          },
-          // {
-          //   dev: 2354241344,
-          //   mode: 33206,
-          //   nlink: 1,
-          //   uid: 0,
-          //   gid: 0,
-          //   rdev: 0,
-          //   blksize: 4096,
-          //   ino: 2533274790967496,
-          //   size: 20992,
-          //   blocks: 48,
-          //   atimeMs: 1597377031172.26,
-          //   mtimeMs: 1564230013788.047,
-          //   ctimeMs: 1591589212749.7786,
-          //   birthtimeMs: 1564230013756.0452,
-          //   atime: "2020-08-14T03:50:31.172Z",
-          //   mtime: "2019-07-27T12:20:13.788Z",
-          //   ctime: "2020-06-08T04:06:52.750Z",
-          //   birthtime: "2019-07-27T12:20:13.756Z",
-          //   isFile: true,
-          //   isDir: false,
-          //   FileName: "ceshiceshi.ppt",
-          //   ModifyTime: "2019-07-27 20:20:13",
-          //   extName: "ppt",
-          //   path: "C:\\Users\\Chris\\Desktop\\pdm\\ceshiceshi.ppt",
-          //   fileSize: "21K",
-          //   title:
-          //     "名称：ceshiceshi.ppt\n大小：21K\n修改日期：2019-07-27 20:20:13",
-          //   fileIcon: "./src/assets/img/ppt.svg",
-          // }
-        ];
       },
     },
   };
@@ -392,6 +420,9 @@
         &:hover {
           background-color: #f0f0f0;
           color: @color-active;
+        }
+        &.disabled {
+          color: #d1d1d1;
         }
       }
     }

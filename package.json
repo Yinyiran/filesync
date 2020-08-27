@@ -16,6 +16,7 @@
     "vue": "^3.0.0-rc.1"
   },
   "devDependencies": {
+    "request": "^2.88.2",
     "@vue/compiler-sfc": "^3.0.0-rc.1",
     "chokidar": "^3.4.2",
     "electron": "^9.2.0",

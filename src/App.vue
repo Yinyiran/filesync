@@ -81,13 +81,15 @@
 <script>
   const Chokidar = require("chokidar");
   const { BrowserWindow, dialog } = require("electron").remote;
-  const Fs = require("fs");
+  const fs = require("fs");
   const Path = require("path");
-  const FormData = require("form-data");
+  // const FormData = require("form-data");
   const Request = require("request");
 
   import { FileIcon } from "./Enum";
   import { Util, HTTP } from "./service";
+  import Axios from "axios";
+  var needle = require("needle");
 
   export default {
     name: "App",
@@ -187,26 +189,100 @@
     methods: {
       // 上传文件
       async uploadFile(list) {
-        let hashs = await Util.GetFileHash(list.map((item) => item.path));
-        let attachments = [];
-        list.forEach((item, index) => {
-          item.FileHash = hashs[index];
-          attachments.push(Fs.createReadStream(item.path));
+        const form = new FormData();
+        form.append("first", 3);
+        form.append("first1", 3);
+        form.append("file1", fs.createReadStream("D:\\111.tx"));
+        Axios({
+          method: "post",
+          url: "/api/uploadFile",
+          data: form,
+          headers: {
+            Authorizition: Util.GetCookie("Authorizition"),
+            "Content-Type": `multipart/form-data`,
+            // ...form.getHeaders(),
+          },
         });
-        const formData = {
-          my_field: "my_value",
-          attachments,
-        };
-        Request.post(
-          { url: "http://localhsot:6000/api/uploadFile", formData },
-          function optionalCallback(err, httpResponse, body) {
-            debugger
-            if (err) {
-              return console.error("upload failed:", err);
-            }
-            console.log("Upload successful!  Server responded with:", body);
-          }
+
+        // let options = {
+        //   method: "POST",
+        //   url: "/api/uploadFile",
+        //   headers: {
+        //     "Content-Type": `multipart/form-data; boundary=${data._boundary}`,
+        //   },
+        // };
+        // return request(options).then((response) => {
+        //   console.log(response);
+        // });
+
+        return;
+        // let data = {
+        //   file: { file: "D:\\111.txt", content_type: "multipart/form-data" },
+        // };
+        try {
+          needle("post", "/api/uploadFile", data, { multipart: true })
+            .then(function (response) {
+              return doSomethingWith(response);
+            })
+            .catch(function (err) {
+              console.log("Call the locksmith!");
+            });
+        } catch (error) {
+          console.log(error);
+        }
+
+        return;
+
+        const promise = new Promise((resolve) => {
+          const fd = new FormData();
+          fd.append("hello", "world");
+          fd.append("file", fs.createReadStream("D:\\111.txt"));
+          fd.pipe(
+            concat({ encoding: "buffer" }, (data) =>
+              resolve({ data, headers: fd.getHeaders() })
+            )
+          );
+        });
+        promise.then(({ data, headers }) =>
+          // axios.post("/hello", data, { headers })
+          Axios.post("/api/uploadFile", data, {
+            headers: {
+              Authorizition: Util.GetCookie("Authorizition"),
+              "Content-Type": "multipart/form-data",
+              ...headers,
+            },
+          })
         );
+        return;
+        let formData = new FormData();
+        // const formData = new FormData();
+        // formData.append("file", fs.readFileSync("D:\\111.txt"), {
+        //   filename: "111.txt",
+        //   contentType: "text/plain",
+        // });
+        formData.append("file", {
+          uri: "D:\\111.txt",
+          name: "111.txt",
+          type: "text/plain",
+        });
+        Axios.post("/api/uploadFile", formData, {
+          headers: {
+            Authorizition: Util.GetCookie("Authorizition"),
+            "Content-Type": "multipart/form-data",
+            // ...formHeaders
+          },
+        });
+
+        // Request.post(
+        //   { url: "http://localhsot:6000/api/uploadFile", formData },
+        //   function optionalCallback(err, httpResponse, body) {
+        //     debugger
+        //     if (err) {
+        //       return console.error("upload failed:", err);
+        //     }
+        //     console.log("Upload successful!  Server responded with:", body);
+        //   }
+        // );
         // let { data } = await HTTP.post("/fileExist", hashs);
         // let upFile = [];
 
@@ -216,7 +292,7 @@
         // Request.post("/api/uploadFile", formData);
         // const result = await HTTP.put("/uploadFile", formData);
 
-        // return Axios.post("/api/uploadFile", form, {
+        // return Axios.post("/api/uploadFile", formData, {
         //   // "Authorizition": Util.GetCookie("Authorizition")
         //   headers: {
         //     Authorizition: Util.GetCookie("Authorizition"),
@@ -230,7 +306,7 @@
         //   const formData = {
         //     name: "file",
         //     file: {
-        //       value: Fs.createReadStream(item.path),
+        //       value: fs.createReadStream(item.path),
         //       options: {
         //         filename: item.FileName,
         //         contentType: Mime.getType(item.extName),
@@ -238,7 +314,7 @@
         //     },
         //   };
         //   // 写入内容
-        //   const fileStream = Fs.createReadStream(item.path);
+        //   const fileStream = fs.createReadStream(item.path);
         //   fileStream.pipe(HTTP.put("/uploadFile", formData), { end: false });
         //   fileStream.on("end", function () {
         //     // 写入尾部
@@ -290,7 +366,7 @@
         }
       },
       getDirAndFile(dirPath) {
-        Fs.readdir(dirPath, (err, infos) => {
+        fs.readdir(dirPath, (err, infos) => {
           if (err)
             return dialog.showMessageBox({
               type: "error",
@@ -300,7 +376,7 @@
           let dirArr = [];
           let fileArr = [];
           infos.forEach((name) => {
-            let res = Fs.statSync(Path.join(dirPath, name));
+            let res = fs.statSync(Path.join(dirPath, name));
             if (res) {
               res.isFile = res.isFile();
               res.isDir = res.isDirectory();
